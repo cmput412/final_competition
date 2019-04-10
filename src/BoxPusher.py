@@ -68,24 +68,25 @@ push_waypoints = [
 ]
 
 
-ar_waypoints = [
-['checkAR5', (3.84 +.1, -1.75 -.15), (0.0, 0.0, -0.731, .682)],
-['checkAR4', (3.12  +0.1 , -1.8 -.1 ),  (0.0, 0.0, -0.731, .682)],
+'''ar_waypoints = [
+['checkAR5', (3.84 +.08, -1.75 -.15), (0.0, 0.0, -0.731, .682)],
+['checkAR4', (3.12  + 0.1 , -1.8 -.1 ),  (0.0, 0.0, -0.731, .682)],
 ['checkAR3', (2.43 -0.05 , -1.76 -0.1 ),(0.0, 0.0, -0.731, .682) ],
 ['checkAR2', (1.73 -.3, -1.76 -.1),  (0.0, 0.0, -0.731, .682)],
 ['checkAR1', (0.899 -.2, -1.8 ,), (0.0, 0.0, -0.731, .682)]
 ]
-'''ar_waypoints = [
-['checkAR5', (0.899, -1.2 - 0.1,), (0.0, 0.0, -0.731, .682)],
+'''
+ar_waypoints = [
+['checkAR5', (0.899 +.3 , -1.2 - 0.1,), (0.0, 0.0, -0.731, .682)],
 
-['checkAR4', (1.60, -0.9),  (0.0, 0.0, -0.731, .682)],
-['checkAR3', (2.48  , -0.9),(0.0, 0.0, -0.731, .682) ],
-['checkAR2', (3.12 , -0.9),  (0.0, 0.0, -0.731, .682)],
+['checkAR4', (1.60 +.3, -0.9),  (0.0, 0.0, -0.731, .682)],
+['checkAR3', (2.48 +.3  , -0.9),(0.0, 0.0, -0.731, .682) ],
+['checkAR2', (3.12 +.3 , -0.9),  (0.0, 0.0, -0.731, .682)],
 
-['checkAR1', (3.84 +.04, -1.1), (0.0, 0.0, -0.731, .682)]
+['checkAR1', (3.84 +.3 , -1.1), (0.0, 0.0, -0.731, .682)]
 
 
-]'''
+]
 
 class SleepState(smach.State):
     def __init__(self):
@@ -236,7 +237,7 @@ class LineFollow(smach.State):
       
             h, w, d =self.image.shape
             search_top = 3*h/4
-            search_bot = search_top + 20
+            search_bot = search_top + 20    
 
             whitemask[0:search_top, 0:w] = 0                                # search for white color
             whitemask[search_bot:h, 0:w] = 0
@@ -253,7 +254,13 @@ class LineFollow(smach.State):
                 cv2.circle(self.image, (cx, cy), 20, (0,255,0),-1)
                 self.noLine = 0
                 self.stop = 1
-                self.twist.linear.x = 0.5
+
+                if counter == 5 or counter ==  6:
+                    self.twist.linear.x = 0.3
+
+                else:
+                    self.twist.linear.x = 0.6
+
                 self.cmd_vel_pub.publish(self.twist)
 
             elif self.M['m00'] > 0 and self.stop == 0:
@@ -289,19 +296,27 @@ class LineFollow(smach.State):
         derivative = (err-prev_err) / dt
         prev_err = err
         output = (err * Kp) + (integral * Ki) + (derivative * Kd)
-        self.twist.linear.x = 0.6
+
+
+        if counter == 5 or counter ==  6:
+            self.twist.linear.x = 0.3
+
+        else:
+            self.twist.linear.x = 0.6
+
         self.twist.angular.z =  -output
         self.cmd_vel_pub.publish(self.twist)
 
 
 class StopState(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['Line','exit1','Done'])
+        smach.State.__init__(self, outcomes=['Line','exit1','LineFollow2','Done'])
         self.cmd_vel_pub = rospy.Publisher('/mobile_base/commands/velocity',
                             Twist, queue_size=1)
         self.button = rospy.Subscriber('/joy', Joy, self.button_callback)
         self.end = 0
         self.twist = Twist()
+        self.initpos = rospy.Publisher('/initialpose', PoseWithCovarianceStamped, queue_size=10)
 
     def button_callback(self,msg):
         rospy.loginfo('in callback')
@@ -322,6 +337,7 @@ class StopState(smach.State):
                 
            
             if counter == 6:
+                self.calcInitial()
 
                 time = rospy.Time.now() + rospy.Duration(2)
                 while rospy.Time.now() < time:
@@ -334,9 +350,9 @@ class StopState(smach.State):
                 self.cmd_vel_pub.publish(self.twist)
 
 
-                time = rospy.Time.now() + rospy.Duration(2)
+                time = rospy.Time.now() + rospy.Duration(1)
                 while rospy.Time.now() < time:
-                    self.twist.angular.z = -0.5
+                    self.twist.angular.z = -0.2
                     self.cmd_vel_pub.publish(self.twist)
 
                 self.twist.angular.z = 0.0
@@ -344,10 +360,24 @@ class StopState(smach.State):
 
 
 
-                return 'Line'
+                return 'LineFollow2'
                 
             return 'Line'
         return 'Done'
+
+
+    def calcInitial(self):
+        start = PoseWithCovarianceStamped()
+        start.header.frame_id = 'map'
+        start.pose.pose.position.x = 0.153
+        start.pose.pose.position.y = 0.325
+        start.pose.pose.position.z = 0
+        start.pose.pose.orientation.x = 0
+        start.pose.pose.orientation.y = 0
+        start.pose.pose.orientation.z = 0
+        start.pose.pose.orientation.w = 1
+        self.initpos.publish(start)
+        rospy.sleep(3)
 
 
 # this function goes to the exit and enter waypoints, doing nothing but going to next state
@@ -693,6 +723,101 @@ class PushBox(smach.State):
         self.twist.angular.z =  -output
         self.cmd_vel_pub.publish(self.twist)
 
+
+
+class LineFollow2(smach.State):
+    
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['checkAR5'])
+        self.bridge = cv_bridge.CvBridge()
+
+        self.image_sub = rospy.Subscriber('usb_cam/image_raw',   
+                        Image,self.image_callback)
+        self.cmd_vel_pub = rospy.Publisher('/mobile_base/commands/velocity',
+                            Twist, queue_size=1)
+        self.twist= Twist()
+        self.rate = rospy.Rate(10)
+        self.M = None
+        self.image = None
+        self.time = 0
+
+    def execute(self, userdata):
+        global counter
+        self.goal = rospy.Time.now() + rospy.Duration(3)
+        self.time = 1
+        rospy.loginfo('Executing Line Follow state')
+        self.twist = Twist()
+        self.noLine = 0
+        self.t1 = None
+
+        countup = True
+        while not rospy.is_shutdown():
+
+            countup = True
+
+            if rospy.Time.now() > self.goal:
+                self.time = 0
+                return 'checkAR5'
+
+                
+
+
+
+    def image_callback(self, msg):
+        global counter
+        if self.time:
+            self.image = self.bridge.imgmsg_to_cv2(msg,desired_encoding='bgr8')
+            hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
+
+            lower_white = numpy.array([180,170,170])#[186,186,186])    [180,180,180] [220,220,220]    # set upper and lower range for white mask
+            upper_white = numpy.array([255,255,255])#[255,255,255]) [255,255,255]
+            whitemask = cv2.inRange(self.image,lower_white,upper_white)
+
+            h, w, d =self.image.shape
+            search_top = 3*h/4
+            search_bot = search_top + 20
+
+            whitemask[0:search_top, 0:w] = 0                                # search for white color
+            whitemask[search_bot:h, 0:w] = 0
+
+            self.M = cv2.moments(whitemask)
+
+
+            if self.M['m00'] > 0:
+                #rospy.loginfo("Line found")
+                self.noLine = 0
+                self.PID_Controller(w)
+            else:
+                self.twist = Twist()
+                self.cmd_vel_pub.publish(self.twist)
+
+
+            cv2.imshow("window", self.image)
+            cv2.waitKey(3)
+
+    def PID_Controller(self, w):
+
+        prev_err = 0
+        integral = 0
+        dt = 1
+
+        cx = int(self.M['m10']/self.M['m00'])
+        cy = int(self.M['m01']/self.M['m00'])
+        cv2.circle(self.image, (cx, cy), 20, (0,0,255),-1)
+        err = cx - w/2
+        Kp = .0035 
+        Ki = 0
+        Kd = .002
+        integral = integral + err * dt
+        derivative = (err-prev_err) / dt
+        prev_err = err
+        output = (err * Kp) + (integral * Ki) + (derivative * Kd)
+
+
+        self.twist.linear.x = 0.3
+        self.twist.angular.z =  -output
+        self.cmd_vel_pub.publish(self.twist)
+
 def main():
     rospy.init_node('Comp5')
     rate = rospy.Rate(10)
@@ -710,10 +835,13 @@ def main():
                                         transitions = {'Stop': 'StopState',
                                                         'exit1':'exit1',
                                                         'Done' : 'DoneProgram'})
+        smach.StateMachine.add('LineFollow2', LineFollow2(),
+                                        transitions = {'checkAR5':'checkAR5'})
 
         smach.StateMachine.add('StopState', StopState(),
                                         transitions = {'Line': 'LineFollow',
                                                         'exit1':'exit1',
+                                                        'LineFollow2':'LineFollow2',
                                                         'Done' : 'DoneProgram'})
 
         for i, w in enumerate(exit_enter_waypoints):
