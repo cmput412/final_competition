@@ -67,7 +67,15 @@ push_waypoints = [
 ['five', (0.899 +.04, -1.8 - 0.1,), (0.0, 0.0, -0.731, .682)]
 ]
 
+
 ar_waypoints = [
+['checkAR5', (3.84 +.14, -1.75 -.1), (0.0, 0.0, -0.731, .682)],
+['checkAR4', (3.12 , -1.8 -.05 ),  (0.0, 0.0, -0.731, .682)],
+['checkAR3', (2.43 +0.1, -1.76 ),(0.0, 0.0, -0.731, .682) ],
+['checkAR2', (1.73, -1.76 -.05),  (0.0, 0.0, -0.731, .682)],
+['checkAR1', (0.899 +.04, -1.8 ,), (0.0, 0.0, -0.731, .682)]
+]
+'''ar_waypoints = [
 ['checkAR5', (0.899, -1.2 - 0.1,), (0.0, 0.0, -0.731, .682)],
 
 ['checkAR4', (1.60, -0.9),  (0.0, 0.0, -0.731, .682)],
@@ -77,7 +85,7 @@ ar_waypoints = [
 ['checkAR1', (3.84 +.04, -1.1), (0.0, 0.0, -0.731, .682)]
 
 
-]
+]'''
 
 class SleepState(smach.State):
     def __init__(self):
@@ -108,7 +116,7 @@ class SleepState(smach.State):
 
 class LineFollow(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=[Stop','Done'])
+        smach.State.__init__(self, outcomes=['Stop','Done'])
         self.bridge = cv_bridge.CvBridge()
 
         self.led1 = rospy.Publisher('/mobile_base/commands/led1', Led, queue_size = 1 )
@@ -140,11 +148,20 @@ class LineFollow(smach.State):
         self.t1 = None
         self.led1.publish(0)
         self.led2.publish(0)
+
+        countup = True
         while not rospy.is_shutdown():
+
+            countup = True
             if self.end:
                 return 'Done'
 
+            
+
+
             elif self.stop: #encountered red line
+                rospy.loginfo(counter)
+
                 if counter == 5: #about to enter parking lot
 
                     self.twist = Twist()
@@ -154,7 +171,7 @@ class LineFollow(smach.State):
                     counter += 1
                     return 'Stop'
 
-                elif counter == 10:
+                elif counter == 10: #done
                     counter = 0
                     
                     self.twist = Twist()
@@ -166,11 +183,24 @@ class LineFollow(smach.State):
                     led2.publish(3)
                     sound.publish(0)
                     rospy.sleep(1)
-                    
                     return 'Stop'
 
-                else:
-                    counter += 1
+                elif countup:
+
+
+                    if counter == 2:
+                        counter = 5
+
+
+                    else:
+                        counter += 1
+                    countup = False
+
+                    self.twist.linear.x = 0.5
+
+                    self.cmd_vel_pub.publish(self.twist)
+                    rospy.sleep(0.5)
+                    self.stop = 0 
 
         return 'Done'
 
@@ -224,7 +254,7 @@ class LineFollow(smach.State):
                 cv2.circle(self.image, (cx, cy), 20, (0,255,0),-1)
                 self.noLine = 0
                 self.stop = 1
-                self.twist.linear.x = 0.3
+                self.twist.linear.x = 0.5
                 self.cmd_vel_pub.publish(self.twist)
 
             elif self.M['m00'] > 0 and self.stop == 0:
@@ -243,7 +273,7 @@ class LineFollow(smach.State):
             cv2.imshow("window", self.image)
             cv2.waitKey(3)
 
-    def PID_Controller(self,w):
+    def PID_Controller(self, w):
 
         prev_err = 0
         integral = 0
@@ -255,12 +285,12 @@ class LineFollow(smach.State):
         err = cx - w/2
         Kp = .0035 
         Ki = 0
-        Kd = .002
+        Kd = .004
         integral = integral + err * dt
         derivative = (err-prev_err) / dt
         prev_err = err
         output = (err * Kp) + (integral * Ki) + (derivative * Kd)
-        self.twist.linear.x = 0.3
+        self.twist.linear.x = 0.6
         self.twist.angular.z =  -output
         self.cmd_vel_pub.publish(self.twist)
 
@@ -365,24 +395,9 @@ class Exit_Enter_Waypoints(smach.State):
         start.pose.pose.orientation.w = 1
         self.initpos.publish(start)
         rospy.sleep(3)
-        rospy.loginfo("before")
-        self.cmd_vel_pub = rospy.Publisher('mobile_base/commands/velocity', Twist, queue_size=5)
-        twist = Twist()
+        
 
-
-        goal = rospy.Time.now() + rospy.Duration(3)
-        while rospy.Time.now() < goal:
-            twist.angular.z = -1
-            self.cmd_vel_pub.publish(twist)   
-
-        goal = rospy.Time.now() + rospy.Duration(3)
-        while rospy.Time.now() < goal:
-            twist.angular.z = 1
-            self.cmd_vel_pub.publish(twist)   
-
-        twist.angular.z = 0
-        self.cmd_vel_pub.publish(twist)
-        rospy.loginfo("after")
+    
 
 
 class AR_Waypoints(smach.State):
@@ -590,6 +605,7 @@ class PushBox(smach.State):
         self.sound = rospy.Publisher('/mobile_base/commands/sound', Sound, queue_size = 1)
 
         self.pose = None
+
         self.twist = Twist()
         self.first = None
 
@@ -658,8 +674,6 @@ class PushBox(smach.State):
         self.twist.linear.x = 0.2
         self.twist.angular.z =  -output
         self.cmd_vel_pub.publish(self.twist)
-
-    
 
 def main():
     rospy.init_node('Comp5')
