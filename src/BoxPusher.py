@@ -68,25 +68,28 @@ push_waypoints = [
 ]
 
 
-'''ar_waypoints = [
-['checkAR5', (3.84 +.08, -1.75 -.15), (0.0, 0.0, -0.731, .682)],
-['checkAR4', (3.12  + 0.1 , -1.8 -.1 ),  (0.0, 0.0, -0.731, .682)],
-['checkAR3', (2.43 -0.05 , -1.76 -0.1 ),(0.0, 0.0, -0.731, .682) ],
-['checkAR2', (1.73 -.3, -1.76 -.1),  (0.0, 0.0, -0.731, .682)],
-['checkAR1', (0.899 -.2, -1.8 ,), (0.0, 0.0, -0.731, .682)]
+ar_waypoints = [
+['checkAR5', (3.84 + 0.1 , -1.75), (0.0, 0.0, -0.731, .682)],
+['checkAR4', (3.12 +.05 , -1.8  ),  (0.0, 0.0, -0.731, .682)],
+['checkAR3', (2.48 -.05 , -1.76 -0.05 ),(0.0, 0.0, -0.731, .682) ],
+['checkAR2', (1.60 +.2, -1.73 -.2),  (0.0, 0.0, -0.731, .682)],
+['checkAR1', (0.899 -.1, -1.8 ), (0.0, 0.0, -0.731, .682)]
+]
+
+
+'''
+#NOTE: DONT TOUCH THESE THEY'RE GOOD
+ar_waypoints = [
+['checkAR5', (0.899 +.5 , -1.2 - 0.1,), (0.0, 0.0, -0.731, .682)],
+
+['checkAR4', (1.60 +.5, -0.9),  (0.0, 0.0, -0.731, .682)],
+['checkAR3', (2.48 +.45  , -1),(0.0, 0.0, -0.731, .682) ],
+['checkAR2', (3.12 +.4 ,  -1),  (0.0, 0.0, -0.731, .682)],
+
+['checkAR1', (3.84 + 0.1  , -1.1), (0.0, 0.0, -0.731, .682)]
+
 ]
 '''
-ar_waypoints = [
-['checkAR5', (0.899 +.3 , -1.2 - 0.1,), (0.0, 0.0, -0.731, .682)],
-
-['checkAR4', (1.60 +.3, -0.9),  (0.0, 0.0, -0.731, .682)],
-['checkAR3', (2.48 +.3  , -0.9),(0.0, 0.0, -0.731, .682) ],
-['checkAR2', (3.12 +.3 , -0.9),  (0.0, 0.0, -0.731, .682)],
-
-['checkAR1', (3.84 +.3 , -1.1), (0.0, 0.0, -0.731, .682)]
-
-
-]
 
 class SleepState(smach.State):
     def __init__(self):
@@ -522,11 +525,16 @@ class AR_Waypoints(smach.State):
             
             alvar_sub.unregister()
 
+
+            #TODO: short circuit
             if self.name == 'checkAR1':
+
                 if BoxSpot == None or BoxGoal == None:
                     return 'enter1'
+
                 self.readTime = 0
                 return 'SideBox'
+
             # if not at last goto next waypoint
             else:
                 self.readTime = 0
@@ -667,7 +675,7 @@ class PushBox(smach.State):
 
         ind_diff  = abs(int(BoxSpot) - int(BoxGoal))
         while not rospy.is_shutdown():
-            goal = rospy.Time.now() + rospy.Duration(4  * ind_diff + 3)
+            goal = rospy.Time.now() + rospy.Duration(4 * ind_diff + 2.5)
             
             while  rospy.Time.now() < goal:
                 self.twist.linear.x = 0.2
