@@ -15,7 +15,7 @@ from ar_track_alvar_msgs.msg import AlvarMarkers
 
 
 numpy.set_printoptions(threshold=numpy.nan)
-counter = 0
+counter = 5
 gshape = "triangle"
 random = 'two'
 
@@ -116,7 +116,7 @@ class SleepState(smach.State):
 
 class LineFollow(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['Stop','Done', 'waypoint'])
+        smach.State.__init__(self, outcomes=['Stop','Done', 'exit1'])
         self.bridge = cv_bridge.CvBridge()
 
         self.led1 = rospy.Publisher('/mobile_base/commands/led1', Led, queue_size = 1 )
@@ -296,7 +296,7 @@ class LineFollow(smach.State):
 
 class StopState(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['Line','Waypoint','Done'])
+        smach.State.__init__(self, outcomes=['Line','exit1','Done'])
         self.cmd_vel_pub = rospy.Publisher('/mobile_base/commands/velocity',
                             Twist, queue_size=1)
         self.button = rospy.Subscriber('/joy', Joy, self.button_callback)
@@ -323,22 +323,24 @@ class StopState(smach.State):
            
             if counter == 6:
 
-                time = rospy.Time.now() + rospy.Duration(1)
+                time = rospy.Time.now() + rospy.Duration(2)
                 while rospy.Time.now() < time:
                     self.twist.linear.x = 0.5
+                    
+                    self.twist.angular.z = 0.2
                     self.cmd_vel_pub.publish(self.twist)
 
-                    self.twist.linear.x = 0.0
-                    self.cmd_vel_pub.publish(self.twist)
+                self.twist.linear.x = 0.0
+                self.cmd_vel_pub.publish(self.twist)
 
 
-                time = rospy.Time.now() + rospy.Duration(1)
+                time = rospy.Time.now() + rospy.Duration(2)
                 while rospy.Time.now() < time:
-                    self.twist.angular.z = 0.5
+                    self.twist.angular.z = -0.5
                     self.cmd_vel_pub.publish(self.twist)
 
-                    self.twist.angular.z = 0.0
-                    self.cmd_vel_pub.publish(self.twist)
+                self.twist.angular.z = 0.0
+                self.cmd_vel_pub.publish(self.twist)
 
 
 
@@ -702,16 +704,16 @@ def main():
         #Compeition 2 states and transitions 
         smach.StateMachine.add('SleepState', SleepState(),
                                         transitions = {'Line': 'LineFollow',
-                                                        'waypoint': 'checkAR5',
                                                         'Done' : 'DoneProgram'})
 
         smach.StateMachine.add('LineFollow', LineFollow(),
                                         transitions = {'Stop': 'StopState',
+                                                        'exit1':'exit1',
                                                         'Done' : 'DoneProgram'})
 
         smach.StateMachine.add('StopState', StopState(),
                                         transitions = {'Line': 'LineFollow',
-                                                        'Waypoint':'exit1',
+                                                        'exit1':'exit1',
                                                         'Done' : 'DoneProgram'})
 
         for i, w in enumerate(exit_enter_waypoints):
