@@ -116,7 +116,7 @@ class SleepState(smach.State):
 
 class LineFollow(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['Stop','Done'])
+        smach.State.__init__(self, outcomes=['Stop','Done', 'waypoint'])
         self.bridge = cv_bridge.CvBridge()
 
         self.led1 = rospy.Publisher('/mobile_base/commands/led1', Led, queue_size = 1 )
@@ -156,8 +156,6 @@ class LineFollow(smach.State):
             if self.end:
                 return 'Done'
 
-            
-
 
             elif self.stop: #encountered red line
                 rospy.loginfo(counter)
@@ -185,12 +183,13 @@ class LineFollow(smach.State):
                     rospy.sleep(1)
                     return 'Stop'
 
-                elif countup:
+                elif self.noLine == 2 and counter == 6:
+                    return 'waypoint'
 
+                elif countup:
 
                     if counter == 2:
                         counter = 5
-
 
                     else:
                         counter += 1
@@ -314,19 +313,36 @@ class StopState(smach.State):
         self.twist = Twist()
         while not rospy.is_shutdown():
             
-            time = rospy.Time.now() + rospy.Duration(2)
-            while rospy.Time.now() < time:
-                self.twist.linear.x = 0
-                self.cmd_vel_pub.publish(self.twist)
-                if self.end:
-                    return 'Done'
+            # time = rospy.Time.now() + rospy.Duration(2)
+            # while rospy.Time.now() < time:
+            #     self.twist.linear.x = 0
+            #     self.cmd_vel_pub.publish(self.twist)
+            #     if self.end:
+            #         return 'Done'
                 
-            self.twist.linear.x = 0.3
-            self.cmd_vel_pub.publish(self.twist)
-            rospy.sleep(.5)
-
+           
             if counter == 6:
-                return 'Waypoint'
+
+                time = rospy.Time.now() + rospy.Duration(1)
+                while rospy.Time.now() < time:
+                    self.twist.linear.x = 0.5
+                    self.cmd_vel_pub.publish(self.twist)
+
+                    self.twist.linear.x = 0.0
+                    self.cmd_vel_pub.publish(self.twist)
+
+
+                time = rospy.Time.now() + rospy.Duration(1)
+                while rospy.Time.now() < time:
+                    self.twist.angular.z = 0.5
+                    self.cmd_vel_pub.publish(self.twist)
+
+                    self.twist.angular.z = 0.0
+                    self.cmd_vel_pub.publish(self.twist)
+
+
+
+                return 'Line'
                 
             return 'Line'
         return 'Done'
@@ -686,6 +702,7 @@ def main():
         #Compeition 2 states and transitions 
         smach.StateMachine.add('SleepState', SleepState(),
                                         transitions = {'Line': 'LineFollow',
+                                                        'waypoint': 'checkAR5',
                                                         'Done' : 'DoneProgram'})
 
         smach.StateMachine.add('LineFollow', LineFollow(),
