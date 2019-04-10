@@ -108,8 +108,9 @@ class SleepState(smach.State):
 
 class LineFollow(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['Scan', 'TurnCounter','TurnClock','Stop','Done'])# 'GoToParkingStart'])
+        smach.State.__init__(self, outcomes=[Stop','Done'])
         self.bridge = cv_bridge.CvBridge()
+
         self.led1 = rospy.Publisher('/mobile_base/commands/led1', Led, queue_size = 1 )
         self.led2 = rospy.Publisher('/mobile_base/commands/led2', Led, queue_size = 1 )
         self.image_sub = rospy.Subscriber('usb_cam/image_raw',   
@@ -117,6 +118,7 @@ class LineFollow(smach.State):
         self.cmd_vel_pub = rospy.Publisher('/mobile_base/commands/velocity',
                             Twist, queue_size=1)
         self.button = rospy.Subscriber('/joy', Joy, self.button_callback)
+
         self.twist= Twist()
         self.rate = rospy.Rate(10)
         self.end = 0 
@@ -169,18 +171,6 @@ class LineFollow(smach.State):
 
                 else:
                     counter += 1
-
-                    
-
-            elif self.noLine == 2 and (counter < 6):
-                counter += 1
-                self.twist.linear.x = -.3
-                self.cmd_vel_pub.publish(self.twist)
-                rospy.sleep(2.5)
-                self.twist = Twist()
-                self.cmd_vel_pub.publish(self.twist)
-
-                return 'Scan'
 
         return 'Done'
 
@@ -394,19 +384,6 @@ class Exit_Enter_Waypoints(smach.State):
         self.cmd_vel_pub.publish(twist)
         rospy.loginfo("after")
 
-        '''def alvarCallback(self, msg):
-        global objectives
-        if self.readTime and 'ar_tag' in objectives:
-            try:
-                rospy.loginfo(msg.markers[0].id)
-                marker = msg.markers[0]
-                if marker.id != 0:
-                    objectives.remove('ar_tag')
-                    self.tagLocated = 1
-
-            except:
-                pass
-                '''
 
 class AR_Waypoints(smach.State):
     def __init__(self, name, position, orientation):
@@ -456,9 +433,7 @@ class AR_Waypoints(smach.State):
                 self.client.wait_for_result()
                 rospy.loginfo(self.name)
                 self.first = 0
-                
-
-            
+                            
             cmd_vel_pub = rospy.Publisher('mobile_base/commands/velocity', Twist, queue_size=5)
             
 
@@ -536,7 +511,7 @@ class SideBox(smach.State):
         global counter, objectives, BoxSpot,BoxGoal, push_waypoints
         while not rospy.is_shutdown():
 
-            first =MoveBaseGoal()
+            first = MoveBaseGoal()
             first.target_pose.header.frame_id = 'map'
             first.target_pose.pose.orientation.x = 0
             first.target_pose.pose.orientation.y = 0
@@ -554,18 +529,14 @@ class SideBox(smach.State):
             if self.first:
                 self.goal = MoveBaseGoal()
                 self.goal.target_pose.header.frame_id = 'map'
-                if int(BoxSpot) < int(BoxGoal):
 
+                if int(BoxSpot) < int(BoxGoal):
                     position = push_waypoints[abs(int(BoxSpot) - 2)][1]
                     orientation = push_waypoints[abs(int(BoxSpot) - 2)][2]
-
-
-                    #TODO: fix orientation
                     self.goal.target_pose.pose.orientation.x = 0
                     self.goal.target_pose.pose.orientation.y = 0
                     self.goal.target_pose.pose.orientation.z = -1
                     self.goal.target_pose.pose.orientation.w = 0.06
-
                   
                 else:
                     position = push_waypoints[abs(int(BoxSpot))][1]
@@ -575,16 +546,12 @@ class SideBox(smach.State):
                     self.goal.target_pose.pose.orientation.z = 0
                     self.goal.target_pose.pose.orientation.w = 1
 
-
-
                 self.goal.target_pose.pose.position.x = position[0]
                 self.goal.target_pose.pose.position.y = position[1]
                 self.goal.target_pose.pose.position.z = 0
                 
                 self.client.send_goal(self.goal)
                 self.client.wait_for_result()
-
-
 
             #adjust orientation 
 
@@ -594,7 +561,6 @@ class SideBox(smach.State):
 
                 while  rospy.Time.now() < goal:
                     self.twist.angular.z = -0.6
-                    #self.PID_Controller()
                     self.cmd_vel_pub.publish(self.twist)   
 
             else:
@@ -604,15 +570,11 @@ class SideBox(smach.State):
 
                 while  rospy.Time.now() < goal:
                     self.twist.angular.z = 0.6
-                    #self.PID_Controller()
                     self.cmd_vel_pub.publish(self.twist)   
 
 
             self.twist.angular.z = 0
-                    #self.PID_Controller()
             self.cmd_vel_pub.publish(self.twist)   
-
-
             self.first = 0
             
             return 'PushBox'
@@ -620,11 +582,13 @@ class SideBox(smach.State):
 class PushBox(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['enter1'])
+
         self.cmd_vel_pub = rospy.Publisher('mobile_base/commands/velocity', Twist, queue_size=5)
         self.odom_sub = rospy.Subscriber('odom', Odometry, self.odomCallback)
         self.led1 = rospy.Publisher('/mobile_base/commands/led1', Led, queue_size = 1 )
         self.led2 = rospy.Publisher('/mobile_base/commands/led2', Led, queue_size = 1 )
         self.sound = rospy.Publisher('/mobile_base/commands/sound', Sound, queue_size = 1)
+
         self.pose = None
         self.twist = Twist()
         self.first = None
@@ -638,13 +602,8 @@ class PushBox(smach.State):
 
 
         ind_diff  = abs(int(BoxSpot) - int(BoxGoal))
-
-
         while not rospy.is_shutdown():
-
-
             goal = rospy.Time.now() + rospy.Duration(4  * ind_diff + 3)
-
             
             while  rospy.Time.now() < goal:
                 self.twist.linear.x = 0.2
@@ -703,7 +662,7 @@ class PushBox(smach.State):
     
 
 def main():
-    rospy.init_node('Comp3')
+    rospy.init_node('Comp5')
     rate = rospy.Rate(10)
     sm = smach.StateMachine(outcomes = ['DoneProgram'])
     sm.set_initial_state(['LineFollow'])
@@ -716,11 +675,7 @@ def main():
                                                         'Done' : 'DoneProgram'})
 
         smach.StateMachine.add('LineFollow', LineFollow(),
-                                        transitions = { 'Scan': 'ScanObject',
-                                                        'TurnCounter': 'Turn90CounterClockwise',
-                                                        'TurnClock': 'Turn90Clockwise',
-                                                        'Stop': 'StopState',
-                                                        #'GoToParkingStart' :  'GoToStart',
+                                        transitions = {'Stop': 'StopState',
                                                         'Done' : 'DoneProgram'})
 
         smach.StateMachine.add('StopState', StopState(),
