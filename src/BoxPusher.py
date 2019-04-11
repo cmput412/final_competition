@@ -58,26 +58,26 @@ shape_waypoints = [
 ['seven', (2.12, -0.64), (0, 0,.6935,.7203)],
 ['six', (2.83+0.1, -0.666), (0, 0,.6935,.7203)]
 ]
-
+'''
 push_waypoints = [
 ['one', (3.84 +.04, -1.75 -.1), (0.0, 0.0, -0.731, .682)],
 ['two', (3.12 , -1.8 -.1),  (0.0, 0.0, -0.731, .682)],
 ['three', (2.43 +0.3, -1.76 - .1),(0.0, 0.0, -0.731, .682) ],
 ['four', (1.73 - 0.06, -1.76 -.1),  (0.0, 0.0, -0.731, .682)],
 ['five', (0.899 +.04, -1.8 - 0.1,), (0.0, 0.0, -0.731, .682)]
+]'''
+
+
+push_waypoints = [
+['one', (3.84 +.04 , -1.75), (0.0, 0.0, -0.731, .682)],
+['two', (3.12 +.45 , -1.75  ),  (0.0, 0.0, -0.731, .682)],
+['three', (2.48 +.2 , -1.76 -0.05 ),(0.0, 0.0, -0.731, .682) ],
+['four', (1.60 +.45, -1.73 -.1),  (0.0, 0.0, -0.731, .682)],
+['five', (0.899 +.15, -1.8 ), (0.0, 0.0, -0.731, .682)]
 ]
 
 
-ar_waypoints = [
-['checkAR5', (3.84 + 0.1 , -1.75), (0.0, 0.0, -0.731, .682)],
-['checkAR4', (3.12 +.05 , -1.8  ),  (0.0, 0.0, -0.731, .682)],
-['checkAR3', (2.48 -.05 , -1.76 -0.05 ),(0.0, 0.0, -0.731, .682) ],
-['checkAR2', (1.60 +.2, -1.73 -.2),  (0.0, 0.0, -0.731, .682)],
-['checkAR1', (0.899 -.1, -1.8 ), (0.0, 0.0, -0.731, .682)]
-]
 
-
-'''
 #NOTE: DONT TOUCH THESE THEY'RE GOOD
 ar_waypoints = [
 ['checkAR5', (0.899 +.5 , -1.2 - 0.1,), (0.0, 0.0, -0.731, .682)],
@@ -89,7 +89,7 @@ ar_waypoints = [
 ['checkAR1', (3.84 + 0.1  , -1.1), (0.0, 0.0, -0.731, .682)]
 
 ]
-'''
+
 
 class SleepState(smach.State):
     def __init__(self):
@@ -143,7 +143,7 @@ class LineFollow(smach.State):
         self.time = 0
 
     def execute(self, userdata):
-        global counter
+        global counter, BoxSpot, BoxGoal
         self.time = 1
         rospy.loginfo('Executing Line Follow state')
         self.stop = 0 
@@ -175,7 +175,8 @@ class LineFollow(smach.State):
 
                 elif counter == 10: #done
                     counter = 0
-                    
+                    BoxSpot = None
+                    BoxGoal = None
                     self.twist = Twist()
                     self.cmd_vel_pub.publish(self.twist)
                     led1 = rospy.Publisher('/mobile_base/commands/led1', Led, queue_size = 1 )
