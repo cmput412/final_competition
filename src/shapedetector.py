@@ -1,3 +1,13 @@
+'''
+Shape Detector
+
+Authors:
+Revan MacQueen
+Jordan McCarthy
+
+This program handles the logic of shape detection
+'''
+
 # import the necessary packages
 import cv2
  
@@ -23,8 +33,6 @@ class ShapeDetector:
 				# a square will have an aspect ratio that is approximately
 				# equal to one, otherwise, the shape is a rectangle
 				shape = "square"
-	 
-		
 	 
 			# otherwise, we assume the shape is a circle
 			else:
