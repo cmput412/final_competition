@@ -158,7 +158,7 @@ class LineFollow(smach.State):
                     
                     return 'Stop'
 
-                 else:
+                else:
                     #just stop for a moment at these locations
                     counter += 1
                     rospy.sleep(0.3)
