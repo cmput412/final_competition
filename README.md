@@ -4,4 +4,5 @@ Authors: Revan MacQueen, Jordan McCarthy
 For instructions and documentation go to:
 
 For a video of our system go to:
+https://www.youtube.com/watch?v=5XsuE7OAziA&app=desktop
 
